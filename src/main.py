@@ -21,10 +21,20 @@ def main() -> None:
         action="store_true",
         help="Ejecuta el navegador visible en lugar de headless.",
     )
+    parser.add_argument(
+        "--start",
+        type=str,
+        help="Añada fecha de inicio en formato dd/mm/yyyy",
+    )
+    parser.add_argument(
+        "--end",
+        type=str,
+        help="Añada fecha de fin en formato dd/mm/yyyy",
+    )
 
     args = parser.parse_args()
 
-    extract_catalog(headless=not args.headed)
+    extract_catalog(args.start, args.end, headless=not args.headed)
 
 
 if __name__ == "__main__":

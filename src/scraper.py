@@ -10,9 +10,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
+from itertools import product
 
 from parser import build_catalog_rows
-from utils import BASE_URL, clean_text, save_catalog
+from utils import BASE_URL, clean_text, save_catalog, validate_dates, transform_dates
 
 
 def build_driver(headless: bool = True) -> webdriver.Chrome:
@@ -90,7 +91,7 @@ def get_select_options(driver: webdriver.Chrome, select_id: str) -> List[Dict[st
                 "label": label,
             }
         )
-
+    print(items)
     return items
 
 
@@ -139,29 +140,43 @@ def load_provinces_for_community(
     province_before = driver.find_element(By.ID, "ddlProvincia")
     current_value = get_current_selected_value(driver, "ddlCCAA")
 
-    if current_value != community_value:
-        community_select = WebDriverWait(driver, 20).until(
+    if current_value != community_value: 
+        # Si el valor actual no es el introducido se modifica
+        community_select = WebDriverWait(driver, 5).until(
             EC.element_to_be_clickable((By.ID, "ddlCCAA"))
         )
         Select(community_select).select_by_value(community_value)
 
         try:
-            WebDriverWait(driver, 20).until(EC.staleness_of(province_before))
+            WebDriverWait(driver, 5).until(EC.staleness_of(province_before))
         except TimeoutException:
             pass
 
-        WebDriverWait(driver, 20).until(
+        WebDriverWait(driver, 5).until(
             lambda d: get_current_selected_value(d, "ddlCCAA") == community_value
         )
 
-    WebDriverWait(driver, 20).until(
+    WebDriverWait(driver, 5).until(
         lambda d: len(Select(d.find_element(By.ID, "ddlProvincia")).options) > 1
     )
 
     return get_select_options(driver, "ddlProvincia")
 
+def set_dates(driver: webdriver.Chrome, date: list):
+    input_start = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "cph_Contenido_txtFechaInicial")))
+    input_start.clear()
+    input_start.send_keys(date[0])
+    input_end = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "cph_Contenido_txtFechaFinal")))
+    input_end.clear()
+    input_end.send_keys(date[1])
 
-def extract_catalog(headless: bool = True) -> str:
+
+def set_values(periods, province_by_community, fuels):
+
+    return
+
+
+def extract_catalog(start_date: str, end_date: str, headless: bool = True) -> str:
     """
     Ejecuta la primera fase del scraping del formulario oficial:
     extrae comunidades autónomas, provincias y tipos de carburante,
@@ -182,6 +197,29 @@ def extract_catalog(headless: bool = True) -> str:
     try:
         driver.get(BASE_URL)
 
+        # FECHAS ....................................................................................
+        dates = validate_dates(start_date, end_date)
+        periods = transform_dates(dates)
+        #for p in periods:
+        #    set_dates(driver, p)
+
+        # Seleccionar valores fijos de la consulta ....................................................................................
+        # Tipo de consulta (Consulta al histórico de precios)
+        select_c = Select(WebDriverWait(driver, 5).until(
+        EC.presence_of_element_located((By.ID, "ddlTipoConsulta"))
+        ))
+        select_c.select_by_value("0")
+        # Tipo temporal (Diaria)
+        select_t = Select(WebDriverWait(driver, 5).until(
+        EC.presence_of_element_located((By.ID, "ddlTipoTemp"))
+        ))
+        select_t.select_by_value("0")
+        # Tipo de serie (Provincia)
+        select_serie = Select(WebDriverWait(driver, 5).until(
+        EC.presence_of_element_located((By.ID, "ddlTipo"))
+        ))
+        select_serie.select_by_value("1")
+        
         communities = get_select_options(driver, "ddlCCAA")
         fuels = get_select_options(driver, "ddlCarburante")
 
@@ -195,6 +233,9 @@ def extract_catalog(headless: bool = True) -> str:
             provinces_by_community[community_code] = provinces
 
             print(f"[OK] {community_name}: {len(provinces)} provincias encontradas")
+        
+        ## ..................................................... set values .........................
+        
 
         rows = build_catalog_rows(
             communities=communities,
