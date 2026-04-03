@@ -43,10 +43,14 @@ def build_driver(headless: bool = True) -> webdriver.Chrome:
     if headless:
         options.add_argument("--headless=new")
 
-    options.add_argument("--window-size=1600,1200")
+    #options.add_argument("--window-size=1600,1200")
     options.add_argument("--disable-blink-features=AutomationControlled")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_experimental_option("prefs", {
+        "download.default_directory" : "/dataset/raw",
+        "download.prompt_for_download": False
+    })
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=options)
@@ -338,6 +342,45 @@ def extract_catalog(headless: bool = True) -> str:
         driver.quit()
 
 
+def run_query(driver: webdriver.Chrome, count_add_serie: int) -> None:
+    
+    # Hace click sobre Aceptar para ejecutar la consulta
+    run_button = WebDriverWait(driver, 2).until(
+            EC.element_to_be_clickable((By.ID, "cph_Contenido_BtnAniadir"))
+        )
+    run_button.click()
+
+    try:
+        alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
+        # driver.switch_to.alert
+        alert.accept()
+        WebDriverWait(driver, 2).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+        print("No hay datos")
+        # driver.switch_to.default_content()
+    except:
+        print("Sin alerta")
+        
+    # Espera a que se cargue el chart
+    WebDriverWait(driver, 2).until(
+            EC.visibility_of_element_located((By.ID, "cph_Contenido_PnlChart")))
+    print(count_add_serie)
+    if count_add_serie > 1:
+        # Hace click sobre Añadir serie
+        add_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "cph_Contenido_btnAniadirSerie"))
+        )
+        add_button.click()
+    else:
+        # Hace click sobre descargar
+        download_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "cph_Contenido_GridSeries_ImgDescargarSeries"))
+        )
+        download_button.click()
+    
+
+
 def prepare_first_row_iterations(
     start_date: str,
     end_date: str,
@@ -384,6 +427,7 @@ def prepare_first_row_iterations(
 
         for period_start, period_end in periods:
             set_date_range(driver, period_start, period_end)
+            count_add_serie = len(target_fuels)
 
             for fuel in target_fuels:
                 set_fuel(driver, fuel["value"])
@@ -408,6 +452,10 @@ def prepare_first_row_iterations(
                     f"{query_row['tipo_carburante']} | "
                     f"{query_row['fecha_inicial']} -> {query_row['fecha_final']}"
                 )
+
+                count_add_serie-=1
+
+                run_query(driver, count_add_serie)
 
         print(f"[OK] Consultas planificadas: {len(planned_queries)}")
         return planned_queries

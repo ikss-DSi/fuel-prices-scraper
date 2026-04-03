@@ -19,8 +19,8 @@ MIN_ALLOWED_DATE_STR = "01/01/2020"
 MIN_ALLOWED_DATE = datetime.strptime(MIN_ALLOWED_DATE_STR, "%d/%m/%Y")
 
 TARGET_FUEL_LABELS = [
-    "Gasolina 95 E85",
-    "Gasolina 98 E10",
+    "Gasolina 95 E5",
+    "Gasolina 98 E5",
     "Gasóleo A habitual",
     "Gasóleo Premium",
     "Gases licuados del petróleo",
@@ -168,8 +168,8 @@ def validate_dates(start_date: str, end_date: str) -> tuple[datetime, datetime]:
         )
 
     today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
-    if end_dt > today:
-        raise ValueError("La fecha final no puede ser posterior al día de hoy.")
+    if end_dt >= today:
+        raise ValueError("La fecha final debe ser anterior al día de hoy.")
 
     return start_dt, end_dt
 
