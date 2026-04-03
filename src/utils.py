@@ -1,6 +1,10 @@
-from pathlib import Path
-import pandas as pd
+from __future__ import annotations
+
+import calendar
 from datetime import datetime, timedelta
+from pathlib import Path
+
+import pandas as pd
 
 
 BASE_URL = "https://energia.serviciosmin.gob.es/shpCarburantes/vista/shp.aspx"
@@ -8,6 +12,22 @@ BASE_URL = "https://energia.serviciosmin.gob.es/shpCarburantes/vista/shp.aspx"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = REPO_ROOT / "dataset" / "raw"
 OUTPUT_CSV = RAW_DIR / "Comumindades_provincias_combustibles.csv"
+
+# Punto donde se fija la fecha mínima admitida por el script.
+# Si quieres cambiar el umbral para pruebas, hazlo aquí.
+MIN_ALLOWED_DATE_STR = "01/01/2020"
+MIN_ALLOWED_DATE = datetime.strptime(MIN_ALLOWED_DATE_STR, "%d/%m/%Y")
+
+TARGET_FUEL_LABELS = [
+    "Gasolina 95 E85",
+    "Gasolina 98 E10",
+    "Gasóleo A habitual",
+    "Gasóleo Premium",
+    "Gases licuados del petróleo",
+    "Gas natural comprimido",
+    "Gas natural licuado",
+    "Adblue",
+]
 
 
 def ensure_directories() -> None:
@@ -56,69 +76,179 @@ def save_catalog(rows: list[dict]) -> Path:
     return OUTPUT_CSV
 
 
-def validate_dates(start_date: str, end_date: str) -> list[datetime, datetime]:
+def catalog_exists() -> bool:
     """
-    Comprueba que las fechas introducidas cumplan las condiciones
-    de formato y tiempo
+    Comprueba si el catálogo base ya existe en disco.
+
+    Returns
+    -------
+    bool
+        True si el CSV existe; False en caso contrario.
+    """
+    return OUTPUT_CSV.exists()
+
+
+def load_first_catalog_row() -> dict[str, str]:
+    """
+    Lee la primera fila del catálogo base para usarla como semilla
+    de la siguiente fase del formulario.
+
+    Returns
+    -------
+    dict[str, str]
+        Primera fila del CSV con todos sus campos como texto.
+
+    Raises
+    ------
+    FileNotFoundError
+        Si el CSV base todavía no existe.
+    ValueError
+        Si el CSV existe pero está vacío.
+    """
+    if not OUTPUT_CSV.exists():
+        raise FileNotFoundError(
+            "No existe el catálogo base. Ejecuta primero el catálogo "
+            "o usa --refresh-catalog."
+        )
+
+    df = pd.read_csv(OUTPUT_CSV, dtype=str)
+
+    if df.empty:
+        raise ValueError("El catálogo base existe, pero no contiene filas.")
+
+    row = df.iloc[0].fillna("").to_dict()
+
+    return {key: clean_text(value) for key, value in row.items()}
+
+
+def validate_dates(start_date: str, end_date: str) -> tuple[datetime, datetime]:
+    """
+    Valida las fechas introducidas por el usuario.
+
+    Reglas:
+    - Deben venir en formato dd/mm/yyyy.
+    - La fecha inicial debe ser menor o igual que la final.
+    - La fecha inicial no puede ser anterior al 01/01/2020.
+    - La fecha final no puede ser posterior al día de ejecución.
 
     Parameters
     ----------
     start_date : str
-        Fecha de inicio de la descarga.
-        
+        Fecha inicial.
     end_date : str
-        Fecha de fin de la descarga.
+        Fecha final.
 
     Returns
     -------
-    list[datetime, datetime]
-        Lista con la fecha de inicio y la fecha de fin en formato datetime.
+    tuple[datetime, datetime]
+        Fechas convertidas a datetime.
+
+    Raises
+    ------
+    ValueError
+        Si alguna regla de validación falla.
     """
-    str_dates = [start_date, end_date]
-    # Convertir a formato fecha y comprobar dd/mm/yyyy
+    if not start_date or not end_date:
+        raise ValueError("Debes indicar fecha inicial y fecha final.")
+
     try:
-        date_dates = [datetime.strptime(d, "%d/%m/%Y") for d in str_dates]
-    except:
-        raise ValueError("Compruebe las fechas, deben tener formato dd/mm/yyyy")
-    
-    # Fecha inicio anterior a fecha final
-    if date_dates[0] < date_dates[1]:
-        pass
-    else:
-        raise ValueError("La fecha final debe ser posterior a la inicial")
+        start_dt = datetime.strptime(start_date, "%d/%m/%Y")
+        end_dt = datetime.strptime(end_date, "%d/%m/%Y")
+    except ValueError as exc:
+        raise ValueError(
+            "Compruebe las fechas: deben tener formato dd/mm/yyyy."
+        ) from exc
 
-    # Fecha final < fecha actual
-    if date_dates[1].date() < datetime.today().date():
-        print("[OK] Fechas")
-    else:
-        raise ValueError("La fecha final debe ser anteior al día de hoy")
-    
-    return date_dates
-    
+    if start_dt > end_dt:
+        raise ValueError("La fecha inicial debe ser anterior o igual a la final.")
 
-def transform_dates(date_dates: list[datetime, datetime]) -> list:
+    if start_dt < MIN_ALLOWED_DATE:
+        raise ValueError(
+            f"La fecha inicial no puede ser anterior a {MIN_ALLOWED_DATE_STR}."
+        )
+
+    today = datetime.today().replace(hour=0, minute=0, second=0, microsecond=0)
+    if end_dt > today:
+        raise ValueError("La fecha final no puede ser posterior al día de hoy.")
+
+    return start_dt, end_dt
+
+
+def build_monthly_periods(
+    date_range: tuple[datetime, datetime],
+) -> list[tuple[str, str]]:
     """
-    Convierte las fechas introducidas a intervalos de 31 días
+    Divide el rango de fechas en bloques mensuales, respetando la
+    limitación del sitio web de consultar como máximo un mes por petición.
+
+    Ejemplo:
+    01/01/2020 - 03/04/2020 =>
+    - 01/01/2020 - 31/01/2020
+    - 01/02/2020 - 29/02/2020
+    - 01/03/2020 - 31/03/2020
+    - 01/04/2020 - 03/04/2020
 
     Parameters
     ----------
-    date_dates: list[datetime, datetime]
-        Lista de fechas de inicio y fin en formato datetime.
+    date_range : tuple[datetime, datetime]
+        Fecha inicial y fecha final validadas.
 
     Returns
     -------
-    list
-        Lista de tuplas de formato string con los periodos de tiempo en los que hacer las descargas.
+    list[tuple[str, str]]
+        Lista de periodos en formato dd/mm/yyyy.
     """
-    date_intervals = []
-    new_start = date_dates[0]
+    start_dt, end_dt = date_range
+    periods: list[tuple[str, str]] = []
 
-    while new_start <= date_dates[1]:
-        new_end = min(new_start + timedelta(days = 30), date_dates[1])
+    current_start = start_dt
 
-        date_intervals.append((new_start.strftime("%d/%m/%Y"),
-                             new_end.strftime("%d/%m/%Y")))
-        
-        new_start = new_end + timedelta(days = 1)
-    
-    return date_intervals
+    while current_start <= end_dt:
+        last_day_of_month = calendar.monthrange(
+            current_start.year, current_start.month
+        )[1]
+        natural_month_end = current_start.replace(day=last_day_of_month)
+        current_end = min(natural_month_end, end_dt)
+
+        periods.append(
+            (
+                current_start.strftime("%d/%m/%Y"),
+                current_end.strftime("%d/%m/%Y"),
+            )
+        )
+
+        current_start = current_end + timedelta(days=1)
+
+    return periods
+
+
+def filter_target_fuels(all_fuels: list[dict[str, str]]) -> list[dict[str, str]]:
+    """
+    Filtra la lista completa de carburantes del portal y devuelve únicamente
+    los combustibles objetivo, respetando el orden definido en TARGET_FUEL_LABELS.
+
+    Parameters
+    ----------
+    all_fuels : list[dict[str, str]]
+        Lista completa de combustibles extraída del selector HTML.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        Subconjunto ordenado de combustibles objetivo.
+
+    Raises
+    ------
+    ValueError
+        Si alguno de los combustibles objetivo no está disponible en la web.
+    """
+    fuel_map = {fuel["label"]: fuel for fuel in all_fuels}
+
+    missing = [label for label in TARGET_FUEL_LABELS if label not in fuel_map]
+    if missing:
+        raise ValueError(
+            "No se encontraron en el portal estos carburantes objetivo: "
+            + ", ".join(missing)
+        )
+
+    return [fuel_map[label] for label in TARGET_FUEL_LABELS]

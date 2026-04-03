@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Dict
+from typing import Dict, List
 
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
@@ -10,10 +10,18 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
-from itertools import product
 
 from parser import build_catalog_rows
-from utils import BASE_URL, clean_text, save_catalog, validate_dates, transform_dates
+from utils import (
+    BASE_URL,
+    build_monthly_periods,
+    catalog_exists,
+    clean_text,
+    filter_target_fuels,
+    load_first_catalog_row,
+    save_catalog,
+    validate_dates,
+)
 
 
 def build_driver(headless: bool = True) -> webdriver.Chrome:
@@ -47,6 +55,30 @@ def build_driver(headless: bool = True) -> webdriver.Chrome:
     return driver
 
 
+def wait_select(driver: webdriver.Chrome, select_id: str, timeout: int = 10) -> Select:
+    """
+    Espera a que un elemento <select> esté presente y devuelve un objeto Select.
+
+    Parameters
+    ----------
+    driver : webdriver.Chrome
+        Navegador Selenium activo.
+    select_id : str
+        ID HTML del selector.
+    timeout : int, optional
+        Tiempo máximo de espera en segundos.
+
+    Returns
+    -------
+    Select
+        Selector Selenium listo para ser usado.
+    """
+    element = WebDriverWait(driver, timeout).until(
+        EC.presence_of_element_located((By.ID, select_id))
+    )
+    return Select(element)
+
+
 def get_select_options(driver: webdriver.Chrome, select_id: str) -> List[Dict[str, str]]:
     """
     Extrae las opciones válidas de un elemento <select> del formulario.
@@ -65,11 +97,7 @@ def get_select_options(driver: webdriver.Chrome, select_id: str) -> List[Dict[st
     List[Dict[str, str]]
         Lista de diccionarios con claves 'value' y 'label'.
     """
-    select_element = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.ID, select_id))
-    )
-    select = Select(select_element)
-
+    select = wait_select(driver, select_id, timeout=20)
     items: List[Dict[str, str]] = []
 
     for option in select.options:
@@ -91,7 +119,7 @@ def get_select_options(driver: webdriver.Chrome, select_id: str) -> List[Dict[st
                 "label": label,
             }
         )
-    print(items)
+
     return items
 
 
@@ -111,10 +139,21 @@ def get_current_selected_value(driver: webdriver.Chrome, select_id: str) -> str:
     str
         Valor seleccionado actualmente.
     """
-    select_element = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.ID, select_id))
-    )
-    return Select(select_element).first_selected_option.get_attribute("value") or ""
+    return wait_select(driver, select_id, timeout=20).first_selected_option.get_attribute(
+        "value"
+    ) or ""
+
+
+def apply_fixed_filters(driver: webdriver.Chrome) -> None:
+    """
+    Configura los valores fijos del formulario:
+    - Tipo de consulta: histórico de precios
+    - Tipo temporal: diaria
+    - Tipo de serie: provincia
+    """
+    wait_select(driver, "ddlTipoConsulta").select_by_value("0")
+    wait_select(driver, "ddlTipoTemp").select_by_value("0")
+    wait_select(driver, "ddlTipo").select_by_value("1")
 
 
 def load_provinces_for_community(
@@ -140,47 +179,115 @@ def load_provinces_for_community(
     province_before = driver.find_element(By.ID, "ddlProvincia")
     current_value = get_current_selected_value(driver, "ddlCCAA")
 
-    if current_value != community_value: 
-        # Si el valor actual no es el introducido se modifica
-        community_select = WebDriverWait(driver, 5).until(
+    if current_value != community_value:
+        community_select = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "ddlCCAA"))
         )
         Select(community_select).select_by_value(community_value)
 
         try:
-            WebDriverWait(driver, 5).until(EC.staleness_of(province_before))
+            WebDriverWait(driver, 10).until(EC.staleness_of(province_before))
         except TimeoutException:
             pass
 
-        WebDriverWait(driver, 5).until(
+        WebDriverWait(driver, 10).until(
             lambda d: get_current_selected_value(d, "ddlCCAA") == community_value
         )
 
-    WebDriverWait(driver, 5).until(
+    WebDriverWait(driver, 10).until(
         lambda d: len(Select(d.find_element(By.ID, "ddlProvincia")).options) > 1
     )
 
     return get_select_options(driver, "ddlProvincia")
 
-def set_dates(driver: webdriver.Chrome, date: list):
-    input_start = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "cph_Contenido_txtFechaInicial")))
-    input_start.clear()
-    input_start.send_keys(date[0])
-    input_end = WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.ID, "cph_Contenido_txtFechaFinal")))
-    input_end.clear()
-    input_end.send_keys(date[1])
 
-
-def set_values(periods, province_by_community, fuels):
-
-    return
-
-
-def extract_catalog(start_date: str, end_date: str, headless: bool = True) -> str:
+def set_date_range(
+    driver: webdriver.Chrome,
+    start_date: str,
+    end_date: str,
+) -> None:
     """
-    Ejecuta la primera fase del scraping del formulario oficial:
-    extrae comunidades autónomas, provincias y tipos de carburante,
-    genera el catálogo de combinaciones y lo guarda en CSV.
+    Escribe en el formulario el rango de fechas de una consulta.
+
+    Parameters
+    ----------
+    driver : webdriver.Chrome
+        Navegador Selenium activo.
+    start_date : str
+        Fecha inicial en formato dd/mm/yyyy.
+    end_date : str
+        Fecha final en formato dd/mm/yyyy.
+    """
+    start_input = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.ID, "cph_Contenido_txtFechaInicial"))
+    )
+    start_input.clear()
+    start_input.send_keys(start_date)
+
+    end_input = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.ID, "cph_Contenido_txtFechaFinal"))
+    )
+    end_input.clear()
+    end_input.send_keys(end_date)
+
+
+def set_location_from_catalog_row(
+    driver: webdriver.Chrome,
+    catalog_row: dict[str, str],
+) -> None:
+    """
+    Toma la primera fila del catálogo base y configura en la web
+    la comunidad autónoma y la provincia correspondientes.
+
+    Parameters
+    ----------
+    driver : webdriver.Chrome
+        Navegador Selenium activo.
+    catalog_row : dict[str, str]
+        Primera fila del CSV base.
+    """
+    community_code = catalog_row["codigo_comunidad_autonoma"]
+    province_code = catalog_row["codigo_provincia"]
+
+    available_provinces = load_provinces_for_community(driver, community_code)
+    available_codes = {province["value"] for province in available_provinces}
+
+    if province_code not in available_codes:
+        raise ValueError(
+            f"La provincia {province_code} no está disponible para la comunidad "
+            f"{community_code} en el formulario."
+        )
+
+    province_select = wait_select(driver, "ddlProvincia")
+    province_select.select_by_value(province_code)
+
+    WebDriverWait(driver, 10).until(
+        lambda d: get_current_selected_value(d, "ddlProvincia") == province_code
+    )
+
+
+def set_fuel(driver: webdriver.Chrome, fuel_code: str) -> None:
+    """
+    Selecciona un carburante en el formulario.
+
+    Parameters
+    ----------
+    driver : webdriver.Chrome
+        Navegador Selenium activo.
+    fuel_code : str
+        Código del carburante.
+    """
+    fuel_select = wait_select(driver, "ddlCarburante")
+    fuel_select.select_by_value(fuel_code)
+
+    WebDriverWait(driver, 10).until(
+        lambda d: get_current_selected_value(d, "ddlCarburante") == fuel_code
+    )
+
+
+def extract_catalog(headless: bool = True) -> str:
+    """
+    Genera el catálogo base de comunidades autónomas, provincias y carburantes.
 
     Parameters
     ----------
@@ -196,30 +303,8 @@ def extract_catalog(start_date: str, end_date: str, headless: bool = True) -> st
 
     try:
         driver.get(BASE_URL)
+        apply_fixed_filters(driver)
 
-        # FECHAS ....................................................................................
-        dates = validate_dates(start_date, end_date)
-        periods = transform_dates(dates)
-        #for p in periods:
-        #    set_dates(driver, p)
-
-        # Seleccionar valores fijos de la consulta ....................................................................................
-        # Tipo de consulta (Consulta al histórico de precios)
-        select_c = Select(WebDriverWait(driver, 5).until(
-        EC.presence_of_element_located((By.ID, "ddlTipoConsulta"))
-        ))
-        select_c.select_by_value("0")
-        # Tipo temporal (Diaria)
-        select_t = Select(WebDriverWait(driver, 5).until(
-        EC.presence_of_element_located((By.ID, "ddlTipoTemp"))
-        ))
-        select_t.select_by_value("0")
-        # Tipo de serie (Provincia)
-        select_serie = Select(WebDriverWait(driver, 5).until(
-        EC.presence_of_element_located((By.ID, "ddlTipo"))
-        ))
-        select_serie.select_by_value("1")
-        
         communities = get_select_options(driver, "ddlCCAA")
         fuels = get_select_options(driver, "ddlCarburante")
 
@@ -233,9 +318,6 @@ def extract_catalog(start_date: str, end_date: str, headless: bool = True) -> st
             provinces_by_community[community_code] = provinces
 
             print(f"[OK] {community_name}: {len(provinces)} provincias encontradas")
-        
-        ## ..................................................... set values .........................
-        
 
         rows = build_catalog_rows(
             communities=communities,
@@ -254,3 +336,119 @@ def extract_catalog(start_date: str, end_date: str, headless: bool = True) -> st
 
     finally:
         driver.quit()
+
+
+def prepare_first_row_iterations(
+    start_date: str,
+    end_date: str,
+    headless: bool = True,
+) -> list[dict[str, str]]:
+    """
+    Usa la primera fila del CSV base para configurar el formulario
+    con una comunidad autónoma y provincia concretas, y luego recorre
+    los combustibles objetivo y los periodos mensuales definidos.
+
+    Esta función todavía no pulsa el botón ACEPTAR; únicamente deja
+    preparada la lógica de iteración y genera una lista de planificación.
+
+    Parameters
+    ----------
+    start_date : str
+        Fecha inicial en formato dd/mm/yyyy.
+    end_date : str
+        Fecha final en formato dd/mm/yyyy.
+    headless : bool, optional
+        Si es True, ejecuta el navegador en modo invisible.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        Lista de consultas planificadas.
+    """
+    driver = build_driver(headless=headless)
+
+    try:
+        driver.get(BASE_URL)
+        apply_fixed_filters(driver)
+
+        validated_range = validate_dates(start_date, end_date)
+        periods = build_monthly_periods(validated_range)
+
+        catalog_row = load_first_catalog_row()
+        set_location_from_catalog_row(driver, catalog_row)
+
+        all_fuels = get_select_options(driver, "ddlCarburante")
+        target_fuels = filter_target_fuels(all_fuels)
+
+        planned_queries: list[dict[str, str]] = []
+
+        for period_start, period_end in periods:
+            set_date_range(driver, period_start, period_end)
+
+            for fuel in target_fuels:
+                set_fuel(driver, fuel["value"])
+
+                query_row = {
+                    "codigo_comunidad_autonoma": catalog_row["codigo_comunidad_autonoma"],
+                    "comunidad_autonoma": catalog_row["comunidad_autonoma"],
+                    "codigo_provincia": catalog_row["codigo_provincia"],
+                    "provincia": catalog_row["provincia"],
+                    "codigo_carburante": fuel["value"],
+                    "tipo_carburante": fuel["label"],
+                    "fecha_inicial": period_start,
+                    "fecha_final": period_end,
+                }
+
+                planned_queries.append(query_row)
+
+                print(
+                    "[PLAN]",
+                    f"{query_row['comunidad_autonoma']} | "
+                    f"{query_row['provincia']} | "
+                    f"{query_row['tipo_carburante']} | "
+                    f"{query_row['fecha_inicial']} -> {query_row['fecha_final']}"
+                )
+
+        print(f"[OK] Consultas planificadas: {len(planned_queries)}")
+        return planned_queries
+
+    finally:
+        driver.quit()
+
+
+def run_setup_flow(
+    start_date: str,
+    end_date: str,
+    headless: bool = True,
+    refresh_catalog: bool = False,
+) -> None:
+    """
+    Orquesta la fase actual del proyecto.
+
+    Flujo:
+    1. Si no existe el catálogo base, o si el usuario lo fuerza,
+       lo genera automáticamente.
+    2. Usa la primera fila del catálogo para preparar la iteración
+       de combustibles y periodos mensuales.
+
+    Parameters
+    ----------
+    start_date : str
+        Fecha inicial en formato dd/mm/yyyy.
+    end_date : str
+        Fecha final en formato dd/mm/yyyy.
+    headless : bool, optional
+        Si es True, ejecuta el navegador en modo invisible.
+    refresh_catalog : bool, optional
+        Si es True, regenera el CSV base aunque ya exista.
+    """
+    if refresh_catalog or not catalog_exists():
+        print("[INFO] Generando catálogo base...")
+        extract_catalog(headless=headless)
+
+    print("[INFO] Preparando iteraciones con la primera fila del CSV...")
+    prepare_first_row_iterations(
+        start_date=start_date,
+        end_date=end_date,
+        headless=headless,
+    )
