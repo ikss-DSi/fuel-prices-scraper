@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import os, time
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -252,3 +253,15 @@ def filter_target_fuels(all_fuels: list[dict[str, str]]) -> list[dict[str, str]]
         )
 
     return [fuel_map[label] for label in TARGET_FUEL_LABELS]
+
+
+def rename_xls(province: str, start_date: str, end_date: str):
+    in_file = os.path.join(RAW_DIR, "Datos.xls")
+    out_file = os.path.join(
+        RAW_DIR, 
+        f"{province}_{start_date.replace("/","-")}_to_{end_date.replace("/","-")}.xls"
+        )
+    while os.path.exists(in_file) == False:
+        time.sleep(1)
+    else:
+        os.rename(in_file, out_file)

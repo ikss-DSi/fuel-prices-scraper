@@ -14,6 +14,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 from parser import build_catalog_rows
 from utils import (
     BASE_URL,
+    RAW_DIR,
     build_monthly_periods,
     catalog_exists,
     clean_text,
@@ -21,6 +22,7 @@ from utils import (
     load_first_catalog_row,
     save_catalog,
     validate_dates,
+    rename_xls,
 )
 
 
@@ -48,7 +50,7 @@ def build_driver(headless: bool = True) -> webdriver.Chrome:
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_experimental_option("prefs", {
-        "download.default_directory" : "/dataset/raw",
+        "download.default_directory" : str(RAW_DIR),
         "download.prompt_for_download": False
     })
 
@@ -342,8 +344,15 @@ def extract_catalog(headless: bool = True) -> str:
         driver.quit()
 
 
-def run_query(driver: webdriver.Chrome, count_add_serie: int) -> None:
+def run_query(
+        driver: webdriver.Chrome, 
+        count_add_serie: int, 
+        province: str, 
+        start_date: str, 
+        end_date: str
+        ) -> None:
     
+    no_data = False
     # Hace click sobre Aceptar para ejecutar la consulta
     run_button = WebDriverWait(driver, 2).until(
             EC.element_to_be_clickable((By.ID, "cph_Contenido_BtnAniadir"))
@@ -359,27 +368,43 @@ def run_query(driver: webdriver.Chrome, count_add_serie: int) -> None:
         )
         print("No hay datos")
         # driver.switch_to.default_content()
+        no_data = True
     except:
         print("Sin alerta")
         
-    # Espera a que se cargue el chart
-    WebDriverWait(driver, 2).until(
-            EC.visibility_of_element_located((By.ID, "cph_Contenido_PnlChart")))
-    print(count_add_serie)
-    if count_add_serie > 1:
-        # Hace click sobre Añadir serie
-        add_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, "cph_Contenido_btnAniadirSerie"))
-        )
-        add_button.click()
-    else:
+    if no_data == False:
+
+        # Espera a que se cargue el chart
+        WebDriverWait(driver, 2).until(
+                EC.visibility_of_element_located((By.ID, "cph_Contenido_PnlChart")))
+        
+        # Si hay más carburantes que consultar
+        if count_add_serie > 1:
+            # Hace click sobre Añadir serie
+            add_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "cph_Contenido_btnAniadirSerie"))
+            )
+            add_button.click()
+    
+    # Último tipo de carburante en la lista
+    if count_add_serie == 1:
+
         # Hace click sobre descargar
         download_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "cph_Contenido_GridSeries_ImgDescargarSeries"))
         )
         download_button.click()
-    
 
+        # Reiniciar la serie
+        home = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '[title="Inicio"]')))
+        home.click()
+        apply_fixed_filters(driver)
+
+        # Renombrar archivo descargado
+        rename_xls(province, start_date, end_date)
+        
+    
 
 def prepare_first_row_iterations(
     start_date: str,
@@ -418,7 +443,7 @@ def prepare_first_row_iterations(
         periods = build_monthly_periods(validated_range)
 
         catalog_row = load_first_catalog_row()
-        set_location_from_catalog_row(driver, catalog_row)
+        #set_location_from_catalog_row(driver, catalog_row)
 
         all_fuels = get_select_options(driver, "ddlCarburante")
         target_fuels = filter_target_fuels(all_fuels)
@@ -427,6 +452,7 @@ def prepare_first_row_iterations(
 
         for period_start, period_end in periods:
             set_date_range(driver, period_start, period_end)
+            set_location_from_catalog_row(driver, catalog_row)
             count_add_serie = len(target_fuels)
 
             for fuel in target_fuels:
@@ -455,7 +481,7 @@ def prepare_first_row_iterations(
 
                 count_add_serie-=1
 
-                run_query(driver, count_add_serie)
+                run_query(driver, count_add_serie, catalog_row["provincia"], period_start, period_end)
 
         print(f"[OK] Consultas planificadas: {len(planned_queries)}")
         return planned_queries
