@@ -1,7 +1,7 @@
 def build_catalog_rows(
     communities: list[dict],
     provinces_by_community: dict[str, list[dict]],
-    fuels: list[dict],
+    #fuels: list[dict],
 ) -> list[dict]:
     """
     Construye una lista de filas con todas las combinaciones posibles entre
@@ -33,16 +33,16 @@ def build_catalog_rows(
         provinces = provinces_by_community.get(community_code, [])
 
         for province in provinces:
-            for fuel in fuels:
-                rows.append(
-                    {
-                        "codigo_comunidad_autonoma": community_code,
-                        "comunidad_autonoma": community_name,
-                        "codigo_provincia": province["value"],
-                        "provincia": province["label"],
-                        "codigo_carburante": fuel["value"],
-                        "tipo_carburante": fuel["label"],
-                    }
-                )
+            #for fuel in fuels:
+            rows.append(
+                {
+                    "codigo_comunidad_autonoma": community_code,
+                    "comunidad_autonoma": community_name,
+                    "codigo_provincia": province["value"],
+                    "provincia": province["label"],
+                    #"codigo_carburante": fuel["value"],
+                    #"tipo_carburante": fuel["label"],
+                }
+            )
 
     return rows

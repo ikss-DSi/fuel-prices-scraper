@@ -16,9 +16,10 @@ from utils import (
     BASE_URL,
     build_monthly_periods,
     catalog_exists,
+    catalog_length,
     clean_text,
     filter_target_fuels,
-    load_first_catalog_row,
+    load_catalog_row,
     save_catalog,
     validate_dates,
 )
@@ -322,7 +323,7 @@ def extract_catalog(headless: bool = True) -> str:
         rows = build_catalog_rows(
             communities=communities,
             provinces_by_community=provinces_by_community,
-            fuels=fuels,
+            #fuels=fuels,
         )
 
         output_path = save_catalog(rows)
@@ -338,7 +339,74 @@ def extract_catalog(headless: bool = True) -> str:
         driver.quit()
 
 
+<<<<<<< HEAD
 def prepare_first_row_iterations(
+=======
+def run_query(
+        driver: webdriver.Chrome, 
+        count_add_serie: int, 
+        province: str, 
+        start_date: str, 
+        end_date: str
+        ) -> None:
+    
+    no_data = False
+    # Hace click sobre Aceptar para ejecutar la consulta
+    run_button = WebDriverWait(driver, 2).until(
+            EC.element_to_be_clickable((By.ID, "cph_Contenido_BtnAniadir"))
+        )
+    run_button.click()
+
+    # Gestión de alerta: No hay datos disponibles
+    try:
+        alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
+        alert.accept()
+        WebDriverWait(driver, 2).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+        no_data = True
+        print("No hay datos disponibles")
+        
+    except:
+        print("Consulta OK")
+        
+    if no_data == False:
+
+        # Espera a que se cargue el chart
+        WebDriverWait(driver, 2).until(
+                EC.visibility_of_element_located((By.ID, "cph_Contenido_PnlChart")))
+        
+        # Si hay más carburantes que consultar
+        if count_add_serie > 1:
+            # Hace click sobre Añadir serie
+            add_button = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "cph_Contenido_btnAniadirSerie"))
+            )
+            add_button.click()
+    
+    # Último tipo de carburante en la lista
+    if count_add_serie == 1:
+
+        # Hace click sobre descargar
+        download_button = WebDriverWait(driver, 10).until(
+            EC.element_to_be_clickable((By.ID, "cph_Contenido_GridSeries_ImgDescargarSeries"))
+        )
+        download_button.click()
+
+        # Reiniciar la serie
+        home = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, '[title="Inicio"]')))
+        home.click()
+        apply_fixed_filters(driver)
+
+        # Renombrar archivo descargado
+        rename_xls(province, start_date, end_date)
+        
+    
+
+def execute_row( ## CAMBIO ............................................
+    row: int,
+>>>>>>> e17d429 (Actualización catálogo y descarga completa)
     start_date: str,
     end_date: str,
     headless: bool = True,
@@ -374,8 +442,13 @@ def prepare_first_row_iterations(
         validated_range = validate_dates(start_date, end_date)
         periods = build_monthly_periods(validated_range)
 
+<<<<<<< HEAD
         catalog_row = load_first_catalog_row()
         set_location_from_catalog_row(driver, catalog_row)
+=======
+        catalog_row = load_catalog_row(row)
+        #set_location_from_catalog_row(driver, catalog_row)
+>>>>>>> e17d429 (Actualización catálogo y descarga completa)
 
         all_fuels = get_select_options(driver, "ddlCarburante")
         target_fuels = filter_target_fuels(all_fuels)
@@ -402,14 +475,23 @@ def prepare_first_row_iterations(
                 planned_queries.append(query_row)
 
                 print(
-                    "[PLAN]",
+                    "[CONSULTA]",
                     f"{query_row['comunidad_autonoma']} | "
                     f"{query_row['provincia']} | "
                     f"{query_row['tipo_carburante']} | "
                     f"{query_row['fecha_inicial']} -> {query_row['fecha_final']}"
                 )
 
+<<<<<<< HEAD
         print(f"[OK] Consultas planificadas: {len(planned_queries)}")
+=======
+                count_add_serie-=1
+
+                run_query(driver, count_add_serie, catalog_row["provincia"], period_start, period_end)
+
+        print(f"[OK] Consultas realizadas: {len(planned_queries)}")
+        
+>>>>>>> e17d429 (Actualización catálogo y descarga completa)
         return planned_queries
 
     finally:
@@ -447,8 +529,12 @@ def run_setup_flow(
         extract_catalog(headless=headless)
 
     print("[INFO] Preparando iteraciones con la primera fila del CSV...")
-    prepare_first_row_iterations(
-        start_date=start_date,
-        end_date=end_date,
-        headless=headless,
-    )
+    
+    for catalog_row in range(0, catalog_length()):
+        execute_row( ## CAMBIO .......................................
+            row=catalog_row,
+            start_date=start_date,
+            end_date=end_date,
+            headless=headless,
+        )
+        

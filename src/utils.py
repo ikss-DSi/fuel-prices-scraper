@@ -88,7 +88,21 @@ def catalog_exists() -> bool:
     return OUTPUT_CSV.exists()
 
 
-def load_first_catalog_row() -> dict[str, str]:
+def catalog_length() -> int:
+    """
+    Comprueba el número de registros del catálogo.
+
+    Returns
+    -------
+    int
+        Longitud del data frame catálogo.
+    """
+    df = pd.read_csv(OUTPUT_CSV, dtype=str)
+
+    return len(df)
+
+
+def load_catalog_row(in_row: int) -> dict[str, str]: ## CAMBIO ...................
     """
     Lee la primera fila del catálogo base para usarla como semilla
     de la siguiente fase del formulario.
@@ -116,7 +130,7 @@ def load_first_catalog_row() -> dict[str, str]:
     if df.empty:
         raise ValueError("El catálogo base existe, pero no contiene filas.")
 
-    row = df.iloc[0].fillna("").to_dict()
+    row = df.iloc[in_row].fillna("").to_dict()
 
     return {key: clean_text(value) for key, value in row.items()}
 
