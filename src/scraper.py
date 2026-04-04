@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
-from parser import build_catalog_rows
+from parser import build_catalog_rows, transfer_to_df
 from utils import (
     BASE_URL,
     RAW_DIR,
@@ -465,19 +465,24 @@ def execute_row( ## CAMBIO ............................................
                     "comunidad_autonoma": catalog_row["comunidad_autonoma"],
                     "codigo_provincia": catalog_row["codigo_provincia"],
                     "provincia": catalog_row["provincia"],
-                    "codigo_carburante": fuel["value"],
-                    "tipo_carburante": fuel["label"],
+                    #"codigo_carburante": fuel["value"],
+                    #"tipo_carburante": fuel["label"],
                     "fecha_inicial": period_start,
                     "fecha_final": period_end,
                 }
 
-                planned_queries.append(query_row)
+                fuels = {
+                    "codigo_carburante": fuel["value"],
+                    "tipo_carburante": fuel["label"],
+                }
+
+                # planned_queries.append(query_row)
 
                 print(
                     "[CONSULTA]",
                     f"{query_row['comunidad_autonoma']} | "
                     f"{query_row['provincia']} | "
-                    f"{query_row['tipo_carburante']} | "
+                    f"{fuel["label"]} | "
                     f"{query_row['fecha_inicial']} -> {query_row['fecha_final']}"
                 )
 
@@ -485,8 +490,11 @@ def execute_row( ## CAMBIO ............................................
 
                 run_query(driver, count_add_serie, catalog_row["provincia"], period_start, period_end)
 
-        print(f"[OK] Consultas realizadas: {len(planned_queries)}")
-        
+            planned_queries.append(query_row)
+            
+        #print(f"[OK] Consultas realizadas: {len(planned_queries)}")
+        planned_queries.append({item["value"]: item["label"] for item in target_fuels})
+
         return planned_queries
 
     finally:
@@ -526,10 +534,12 @@ def run_setup_flow(
     print("[INFO] Preparando iteraciones con la primera fila del CSV...")
     
     for catalog_row in range(0, catalog_length()):
-        execute_row( ## CAMBIO .......................................
+        queries = execute_row( ## CAMBIO .......................................
             row=catalog_row,
             start_date=start_date,
             end_date=end_date,
             headless=headless,
         )
+        print('TRANSFER_TO_DF')
+        transfer_to_df(queries)
         

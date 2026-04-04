@@ -13,6 +13,8 @@ BASE_URL = "https://energia.serviciosmin.gob.es/shpCarburantes/vista/shp.aspx"
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = REPO_ROOT / "dataset" / "raw"
 OUTPUT_CSV = RAW_DIR / "Comumindades_provincias_combustibles.csv"
+PROCESSED_DIR = REPO_ROOT / "dataset" / "processed"
+OUTPUT_DF = PROCESSED_DIR / "Historico_precios_combustibles_España.csv"
 
 # Punto donde se fija la fecha mínima admitida por el script.
 # Si quieres cambiar el umbral para pruebas, hazlo aquí.
@@ -273,7 +275,7 @@ def rename_xls(province: str, start_date: str, end_date: str):
     in_file = os.path.join(RAW_DIR, "Datos.xls")
     out_file = os.path.join(
         RAW_DIR, 
-        f"{province}_{start_date.replace("/","-")}_to_{end_date.replace("/","-")}.xls"
+        f"{province}_{start_date.replace("/","-")}_{end_date.replace("/","-")}.xls"
         )
     while os.path.exists(in_file) == False:
         time.sleep(1)

@@ -1,3 +1,7 @@
+from utils import OUTPUT_DF, RAW_DIR
+import os
+import pandas as pd
+
 def build_catalog_rows(
     communities: list[dict],
     provinces_by_community: dict[str, list[dict]],
@@ -46,3 +50,47 @@ def build_catalog_rows(
             )
 
     return rows
+
+
+def transfer_to_df(queries: list[dict[str, str]]):
+    """
+    Integra los datos descargados en un data frame
+
+    Parameters
+    ----------
+    queries : list[dict[str, str]]
+        queries realizadas al formulario con web scrapping, 
+        incluyendo los códigos de los carburantes.
+
+    """
+    #Comproar que existe data frame
+    if not os.path.exists(OUTPUT_DF):
+        df = pd.DataFrame(columns=[
+            "Comunidad Autonoma",
+            "Provincia",
+            "Carburante",
+            "Fecha",
+            "Precio"
+        ])
+        df.to_csv(OUTPUT_DF, index = False, encoding="latin-1")
+    
+    df = pd.read_csv(OUTPUT_DF)
+
+    # Extraer información de los archivos descargados
+    for q in queries[:-1]:
+        file = os.path.join(
+            RAW_DIR,
+            f"{q["provincia"]}_{q["fecha_inicial"].replace("/","-")}_{q["fecha_final"].replace("/","-")}.xls"
+            )
+        print(file)
+        if os.path.exists(file):
+            
+            in_df = pd.read_excel(file, sheet_name=None)
+            sheets = list(in_df.keys())
+            for s in sheets:
+                fuel = s.split()[1]
+                in_df[s]["Provincia"] = q["provincia"]
+                in_df[s]["Comunidad Autonoma"] = q["comunidad_autonoma"]
+                in_df[s]["Carburante"] = queries[-1][fuel]
+                df = pd.concat([df,in_df[s]], ignore_index = True)
+            df.to_csv(OUTPUT_DF, index = False, encoding="latin-1")
