@@ -17,9 +17,10 @@ from utils import (
     RAW_DIR,
     build_monthly_periods,
     catalog_exists,
+    catalog_length,
     clean_text,
     filter_target_fuels,
-    load_first_catalog_row,
+    load_catalog_row,
     save_catalog,
     validate_dates,
     rename_xls,
@@ -328,7 +329,7 @@ def extract_catalog(headless: bool = True) -> str:
         rows = build_catalog_rows(
             communities=communities,
             provinces_by_community=provinces_by_community,
-            fuels=fuels,
+            #fuels=fuels,
         )
 
         output_path = save_catalog(rows)
@@ -359,18 +360,18 @@ def run_query(
         )
     run_button.click()
 
+    # Gestión de alerta: No hay datos disponibles
     try:
         alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
-        # driver.switch_to.alert
         alert.accept()
         WebDriverWait(driver, 2).until(
             lambda d: d.execute_script("return document.readyState") == "complete"
         )
-        print("No hay datos")
-        # driver.switch_to.default_content()
         no_data = True
+        print("No hay datos disponibles")
+        
     except:
-        print("Sin alerta")
+        print("Consulta OK")
         
     if no_data == False:
 
@@ -406,7 +407,8 @@ def run_query(
         
     
 
-def prepare_first_row_iterations(
+def execute_row( ## CAMBIO ............................................
+    row: int,
     start_date: str,
     end_date: str,
     headless: bool = True,
@@ -442,7 +444,7 @@ def prepare_first_row_iterations(
         validated_range = validate_dates(start_date, end_date)
         periods = build_monthly_periods(validated_range)
 
-        catalog_row = load_first_catalog_row()
+        catalog_row = load_catalog_row(row)
         #set_location_from_catalog_row(driver, catalog_row)
 
         all_fuels = get_select_options(driver, "ddlCarburante")
@@ -472,7 +474,7 @@ def prepare_first_row_iterations(
                 planned_queries.append(query_row)
 
                 print(
-                    "[PLAN]",
+                    "[CONSULTA]",
                     f"{query_row['comunidad_autonoma']} | "
                     f"{query_row['provincia']} | "
                     f"{query_row['tipo_carburante']} | "
@@ -483,7 +485,8 @@ def prepare_first_row_iterations(
 
                 run_query(driver, count_add_serie, catalog_row["provincia"], period_start, period_end)
 
-        print(f"[OK] Consultas planificadas: {len(planned_queries)}")
+        print(f"[OK] Consultas realizadas: {len(planned_queries)}")
+        
         return planned_queries
 
     finally:
@@ -521,8 +524,12 @@ def run_setup_flow(
         extract_catalog(headless=headless)
 
     print("[INFO] Preparando iteraciones con la primera fila del CSV...")
-    prepare_first_row_iterations(
-        start_date=start_date,
-        end_date=end_date,
-        headless=headless,
-    )
+    
+    for catalog_row in range(0, catalog_length()):
+        execute_row( ## CAMBIO .......................................
+            row=catalog_row,
+            start_date=start_date,
+            end_date=end_date,
+            headless=headless,
+        )
+        
