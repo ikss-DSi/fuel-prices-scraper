@@ -2,7 +2,7 @@ from utils import OUTPUT_DF, RAW_DIR
 import os
 import pandas as pd
 
-def build_catalog_rows(
+def build_catalog_rows( ## QUITAR FUELS ............................................................................................................
     communities: list[dict],
     provinces_by_community: dict[str, list[dict]],
     #fuels: list[dict],
@@ -54,7 +54,7 @@ def build_catalog_rows(
 
 def transfer_to_df(queries: list[dict[str, str]]):
     """
-    Integra los datos descargados en un data frame
+    Integra los datos descargados en un único data frame
 
     Parameters
     ----------
@@ -94,3 +94,4 @@ def transfer_to_df(queries: list[dict[str, str]]):
                 in_df[s]["Carburante"] = queries[-1][fuel]
                 df = pd.concat([df,in_df[s]], ignore_index = True)
             df.to_csv(OUTPUT_DF, index = False, encoding="latin-1")
+            print(f"Datos de {q["provincia"]} entre el {q["fecha_inicial"]} y el {q["fecha_final"]} transferidos al data frame")

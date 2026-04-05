@@ -12,7 +12,7 @@ BASE_URL = "https://energia.serviciosmin.gob.es/shpCarburantes/vista/shp.aspx"
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = REPO_ROOT / "dataset" / "raw"
-OUTPUT_CSV = RAW_DIR / "Comumindades_provincias_combustibles.csv"
+OUTPUT_CSV = RAW_DIR / "Comumindades_provincias_combustibles.csv"  ### CAMBIAR: quitar combustibles del nombre ..........................................................
 PROCESSED_DIR = REPO_ROOT / "dataset" / "processed"
 OUTPUT_DF = PROCESSED_DIR / "Historico_precios_combustibles_España.csv"
 
@@ -61,7 +61,7 @@ def clean_text(text: str) -> str:
 def save_catalog(rows: list[dict]) -> Path:
     """
     Guarda en CSV el catálogo de combinaciones entre comunidad autónoma,
-    provincia y tipo de carburante.
+    provincia y tipo de carburante. ## QUITAR TIPO DE CARBURANTE ...................................................................
 
     Parameters
     ----------
@@ -105,15 +105,20 @@ def catalog_length() -> int:
     return len(df)
 
 
-def load_catalog_row(in_row: int) -> dict[str, str]: ## CAMBIO ...................
+def load_catalog_row(in_row: int) -> dict[str, str]:
     """
-    Lee la primera fila del catálogo base para usarla como semilla
+    Lee la fila del catálogo base para usarla como semilla
     de la siguiente fase del formulario.
+
+    Parameters
+    ----------
+    in_row: int
+        Número de fila en el catálogo a consultar
 
     Returns
     -------
     dict[str, str]
-        Primera fila del CSV con todos sus campos como texto.
+        Fila del CSV con todos sus campos como texto.
 
     Raises
     ------
@@ -271,7 +276,22 @@ def filter_target_fuels(all_fuels: list[dict[str, str]]) -> list[dict[str, str]]
     return [fuel_map[label] for label in TARGET_FUEL_LABELS]
 
 
-def rename_xls(province: str, start_date: str, end_date: str):
+def rename_xls(province: str, start_date: str, end_date: str) -> None:
+    """
+    Renombra los archivos xls descargados del formulario como
+    provinvincia_fecha de inicio_fecha de fin.xls
+
+    Parameters
+    ----------
+    province : str
+        Provincia a la que pertenecen los datos.
+
+    start_date : str
+        Fecha de inicio del periodo.
+
+    end_date : str
+        Fecha de fin del periodo.
+    """
     in_file = os.path.join(RAW_DIR, "Datos.xls")
     out_file = os.path.join(
         RAW_DIR, 

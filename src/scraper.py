@@ -540,6 +540,5 @@ def run_setup_flow(
             end_date=end_date,
             headless=headless,
         )
-        print('TRANSFER_TO_DF')
         transfer_to_df(queries)
         
