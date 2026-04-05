@@ -151,6 +151,11 @@ def apply_fixed_filters(driver: webdriver.Chrome) -> None:
     - Tipo de consulta: histórico de precios
     - Tipo temporal: diaria
     - Tipo de serie: provincia
+
+    Parameters
+    ----------
+    driver: webdriver.Chrome
+        Navegador Selenium activo.
     """
     wait_select(driver, "ddlTipoConsulta").select_by_value("0")
     wait_select(driver, "ddlTipoTemp").select_by_value("0")
@@ -237,7 +242,7 @@ def set_location_from_catalog_row(
     catalog_row: dict[str, str],
 ) -> None:
     """
-    Toma la primera fila del catálogo base y configura en la web
+    Toma la fila del catálogo base y configura en la web
     la comunidad autónoma y la provincia correspondientes.
 
     Parameters
@@ -245,7 +250,7 @@ def set_location_from_catalog_row(
     driver : webdriver.Chrome
         Navegador Selenium activo.
     catalog_row : dict[str, str]
-        Primera fila del CSV base.
+        Fila del CSV base.
     """
     community_code = catalog_row["codigo_comunidad_autonoma"]
     province_code = catalog_row["codigo_provincia"]
@@ -288,7 +293,7 @@ def set_fuel(driver: webdriver.Chrome, fuel_code: str) -> None:
 
 def extract_catalog(headless: bool = True) -> str:
     """
-    Genera el catálogo base de comunidades autónomas, provincias y carburantes.
+    Genera el catálogo base de comunidades autónomas y provincias.
 
     Parameters
     ----------
@@ -323,7 +328,6 @@ def extract_catalog(headless: bool = True) -> str:
         rows = build_catalog_rows(
             communities=communities,
             provinces_by_community=provinces_by_community,
-            #fuels=fuels,
         )
 
         output_path = save_catalog(rows)
@@ -349,7 +353,31 @@ def run_query(
         start_date: str, 
         end_date: str
         ) -> None:
-    
+    """
+    Ejecuta la consulta y deja preparado el entorno para la suiguiente.
+
+    En caso de tratarse del último de los combiustibles a consulta,
+    descarga el archivo xls.
+
+    Parameters
+    ----------
+    driver: webdriver.Chrome
+        Navegador Selenium activo.
+    count_add_serie: int
+        Contador del número de consultas por carburante.
+    province: str
+        Provincia consultada.
+    start_date : str
+        Fecha inicial en formato dd/mm/yyyy.
+    end_date : str
+        Fecha final en formato dd/mm/yyyy.
+
+    Returns
+    -------
+    list[dict[str, str]]
+        Lista de realizadas (Comunidad Autónoma, Provincia
+        y periodo de tiempo).
+    """
     no_data = False
     # Hace click sobre Aceptar para ejecutar la consulta
     run_button = WebDriverWait(driver, 2).until(
@@ -404,7 +432,7 @@ def run_query(
         
     
 
-def execute_row( ## CAMBIO ............................................
+def execute_row(
     row: int,
 >>>>>>> e17d429 (Actualización catálogo y descarga completa)
     start_date: str,
@@ -412,15 +440,17 @@ def execute_row( ## CAMBIO ............................................
     headless: bool = True,
 ) -> list[dict[str, str]]:
     """
-    Usa la primera fila del CSV base para configurar el formulario
-    con una comunidad autónoma y provincia concretas, y luego recorre
+    Usa la fila del CSV base para configurar el formulario
+    con una comunidad autónoma y provincia concretas, y recorre
     los combustibles objetivo y los periodos mensuales definidos.
 
-    Esta función todavía no pulsa el botón ACEPTAR; únicamente deja
-    preparada la lógica de iteración y genera una lista de planificación.
+    Esta función deja preparados todos los valores del formulario
+    para ejecutar la consulta descarga.
 
     Parameters
     ----------
+    row: int
+        Fila del catálogo utilizada.
     start_date : str
         Fecha inicial en formato dd/mm/yyyy.
     end_date : str
@@ -431,7 +461,8 @@ def execute_row( ## CAMBIO ............................................
     Returns
     -------
     list[dict[str, str]]
-        Lista de consultas planificadas.
+        Lista de realizadas (Comunidad Autónoma, Provincia
+        y periodo de tiempo).
     """
     driver = build_driver(headless=headless)
 
@@ -447,8 +478,11 @@ def execute_row( ## CAMBIO ............................................
         set_location_from_catalog_row(driver, catalog_row)
 =======
         catalog_row = load_catalog_row(row)
+<<<<<<< HEAD
         #set_location_from_catalog_row(driver, catalog_row)
 >>>>>>> e17d429 (Actualización catálogo y descarga completa)
+=======
+>>>>>>> c3e0b50 (Actualización ayuda y comentarios)
 
         all_fuels = get_select_options(driver, "ddlCarburante")
         target_fuels = filter_target_fuels(all_fuels)
@@ -466,14 +500,20 @@ def execute_row( ## CAMBIO ............................................
                     "comunidad_autonoma": catalog_row["comunidad_autonoma"],
                     "codigo_provincia": catalog_row["codigo_provincia"],
                     "provincia": catalog_row["provincia"],
+<<<<<<< HEAD
                     "codigo_carburante": fuel["value"],
                     "tipo_carburante": fuel["label"],
+=======
+>>>>>>> c3e0b50 (Actualización ayuda y comentarios)
                     "fecha_inicial": period_start,
                     "fecha_final": period_end,
                 }
 
+<<<<<<< HEAD
                 planned_queries.append(query_row)
 
+=======
+>>>>>>> c3e0b50 (Actualización ayuda y comentarios)
                 print(
                     "[CONSULTA]",
                     f"{query_row['comunidad_autonoma']} | "
@@ -528,7 +568,7 @@ def run_setup_flow(
         print("[INFO] Generando catálogo base...")
         extract_catalog(headless=headless)
 
-    print("[INFO] Preparando iteraciones con la primera fila del CSV...")
+    print("[INFO] Preparando iteraciones...")
     
     for catalog_row in range(0, catalog_length()):
         execute_row( ## CAMBIO .......................................
