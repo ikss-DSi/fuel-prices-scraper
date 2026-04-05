@@ -2,14 +2,13 @@ from utils import OUTPUT_DF, RAW_DIR
 import os
 import pandas as pd
 
-def build_catalog_rows( ## QUITAR FUELS ............................................................................................................
+def build_catalog_rows(
     communities: list[dict],
     provinces_by_community: dict[str, list[dict]],
-    #fuels: list[dict],
 ) -> list[dict]:
     """
     Construye una lista de filas con todas las combinaciones posibles entre
-    comunidad autónoma, provincia y tipo de carburante.
+    comunidad autónoma y provincia.
 
     Este catálogo servirá como base para iteraciones posteriores sobre
     el formulario del sitio oficial.
@@ -20,8 +19,6 @@ def build_catalog_rows( ## QUITAR FUELS ........................................
         Lista de comunidades autónomas con código y etiqueta.
     provinces_by_community : dict[str, list[dict]]
         Diccionario que relaciona cada comunidad con sus provincias.
-    fuels : list[dict]
-        Lista de combustibles disponibles en el selector.
 
     Returns
     -------
@@ -37,22 +34,19 @@ def build_catalog_rows( ## QUITAR FUELS ........................................
         provinces = provinces_by_community.get(community_code, [])
 
         for province in provinces:
-            #for fuel in fuels:
             rows.append(
                 {
                     "codigo_comunidad_autonoma": community_code,
                     "comunidad_autonoma": community_name,
                     "codigo_provincia": province["value"],
                     "provincia": province["label"],
-                    #"codigo_carburante": fuel["value"],
-                    #"tipo_carburante": fuel["label"],
                 }
             )
 
     return rows
 
 
-def transfer_to_df(queries: list[dict[str, str]]):
+def transfer_to_df(queries: list[dict[str, str]]) -> None:
     """
     Integra los datos descargados en un único data frame
 
@@ -74,7 +68,7 @@ def transfer_to_df(queries: list[dict[str, str]]):
         ])
         df.to_csv(OUTPUT_DF, index = False, encoding="latin-1")
     
-    df = pd.read_csv(OUTPUT_DF)
+    df = pd.read_csv(OUTPUT_DF, encoding="latin-1")
 
     # Extraer información de los archivos descargados
     for q in queries[:-1]:
@@ -82,10 +76,9 @@ def transfer_to_df(queries: list[dict[str, str]]):
             RAW_DIR,
             f"{q["provincia"]}_{q["fecha_inicial"].replace("/","-")}_{q["fecha_final"].replace("/","-")}.xls"
             )
-        print(file)
         if os.path.exists(file):
             
-            in_df = pd.read_excel(file, sheet_name=None)
+            in_df = pd.read_excel(file, sheet_name=None, engine="xlrd")
             sheets = list(in_df.keys())
             for s in sheets:
                 fuel = s.split()[1]
@@ -94,4 +87,4 @@ def transfer_to_df(queries: list[dict[str, str]]):
                 in_df[s]["Carburante"] = queries[-1][fuel]
                 df = pd.concat([df,in_df[s]], ignore_index = True)
             df.to_csv(OUTPUT_DF, index = False, encoding="latin-1")
-            print(f"Datos de {q["provincia"]} entre el {q["fecha_inicial"]} y el {q["fecha_final"]} transferidos al data frame")
+            print(f"        Datos de {q["provincia"]} entre el {q["fecha_inicial"]} y el {q["fecha_final"]} transferidos al data frame.")
