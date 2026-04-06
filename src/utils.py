@@ -12,7 +12,7 @@ BASE_URL = "https://energia.serviciosmin.gob.es/shpCarburantes/vista/shp.aspx"
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RAW_DIR = REPO_ROOT / "dataset" / "raw"
-OUTPUT_CSV = RAW_DIR / "Comumindades_provincias_combustibles.csv"  ### CAMBIAR: quitar combustibles del nombre ..........................................................
+OUTPUT_CSV = RAW_DIR / "Comumindades_provincias.csv"
 PROCESSED_DIR = REPO_ROOT / "dataset" / "processed"
 OUTPUT_DF = PROCESSED_DIR / "Historico_precios_combustibles_España.csv"
 
@@ -60,8 +60,8 @@ def clean_text(text: str) -> str:
 
 def save_catalog(rows: list[dict]) -> Path:
     """
-    Guarda en CSV el catálogo de combinaciones entre comunidad autónoma,
-    provincia y tipo de carburante. ## QUITAR TIPO DE CARBURANTE ...................................................................
+    Guarda en CSV el catálogo de combinaciones entre comunidad autónoma y
+    provincia.
 
     Parameters
     ----------
@@ -100,7 +100,7 @@ def catalog_length() -> int:
     int
         Longitud del data frame catálogo.
     """
-    df = pd.read_csv(OUTPUT_CSV, dtype=str)
+    df = pd.read_csv(OUTPUT_CSV, dtype=str, encoding="latin-1")
 
     return len(df)
 
@@ -133,7 +133,7 @@ def load_catalog_row(in_row: int) -> dict[str, str]:
             "o usa --refresh-catalog."
         )
 
-    df = pd.read_csv(OUTPUT_CSV, dtype=str)
+    df = pd.read_csv(OUTPUT_CSV, dtype=str, encoding="latin-1")
 
     if df.empty:
         raise ValueError("El catálogo base existe, pero no contiene filas.")

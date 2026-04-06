@@ -315,6 +315,9 @@ def extract_catalog(headless: bool = True) -> str:
 
     try:
         driver.get(BASE_URL)
+        user_agent = driver.execute_script("return navigator.UserAgentData;")
+        print(f"\nUser-Agent utilizado: {user_agent}\nSession id: {driver.session_id}")
+
         apply_fixed_filters(driver)
 
         communities = get_select_options(driver, "ddlCCAA")
@@ -382,8 +385,9 @@ def run_query(
         y periodo de tiempo).
     """
     no_data = False
+    print(count_add_serie)
     # Hace click sobre Aceptar para ejecutar la consulta
-    run_button = WebDriverWait(driver, 2).until(
+    run_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "cph_Contenido_BtnAniadir"))
         )
     run_button.click()
@@ -392,7 +396,7 @@ def run_query(
     try:
         alert = WebDriverWait(driver, 1).until(EC.alert_is_present())
         alert.accept()
-        WebDriverWait(driver, 2).until(
+        WebDriverWait(driver, 10).until(
             lambda d: d.execute_script("return document.readyState") == "complete"
         )
         no_data = True
@@ -404,11 +408,11 @@ def run_query(
     if no_data == False:
 
         # Espera a que se cargue el chart
-        WebDriverWait(driver, 2).until(
+        WebDriverWait(driver, 10).until(
                 EC.visibility_of_element_located((By.ID, "cph_Contenido_PnlChart")))
         
         # Si hay más carburantes que consultar
-        if count_add_serie > 1:
+        if count_add_serie > 0:
             # Hace click sobre Añadir serie
             add_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.ID, "cph_Contenido_btnAniadirSerie"))
@@ -416,7 +420,7 @@ def run_query(
             add_button.click()
     
     # Último tipo de carburante en la lista
-    if count_add_serie == 1:
+    if count_add_serie == 0:
 
         # Hace click sobre descargar
         download_button = WebDriverWait(driver, 10).until(
@@ -470,6 +474,9 @@ def execute_row(
 
     try:
         driver.get(BASE_URL)
+        user_agent = driver.execute_script("return navigator.userAgentData;")
+        print(f"\nUser-Agent utilizado: {user_agent}\nSession id: {driver.session_id}")
+
         apply_fixed_filters(driver)
 
         validated_range = validate_dates(start_date, end_date)
@@ -508,7 +515,7 @@ def execute_row(
                 )
 
                 count_add_serie-=1
-
+                print(fuel)
                 run_query(driver, count_add_serie, catalog_row["provincia"], period_start, period_end)
 
             planned_queries.append(query_row)
@@ -555,7 +562,7 @@ def run_setup_flow(
     print("[INFO] Preparando iteraciones...")
     
     for catalog_row in range(0, catalog_length()):
-        queries = execute_row( ## CAMBIO .......................................
+        queries = execute_row(
             row=catalog_row,
             start_date=start_date,
             end_date=end_date,
