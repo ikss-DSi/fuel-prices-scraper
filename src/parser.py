@@ -87,4 +87,4 @@ def transfer_to_df(queries: list[dict[str, str]]) -> None:
                 in_df[s]["Carburante"] = queries[-1][fuel]
                 df = pd.concat([df,in_df[s]], ignore_index = True)
             df.to_csv(OUTPUT_DF, index = False, encoding="latin-1")
-            print(f"        Datos de {q["provincia"]} entre el {q["fecha_inicial"]} y el {q["fecha_final"]} transferidos al data frame.")
+            print(f"        [CARGA] Datos de {q["provincia"]} entre el {q["fecha_inicial"]} y el {q["fecha_final"]} transferidos al data frame.")

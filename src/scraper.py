@@ -316,7 +316,7 @@ def extract_catalog(headless: bool = True) -> str:
     try:
         driver.get(BASE_URL)
         user_agent = driver.execute_script("return navigator.UserAgentData;")
-        print(f"\nUser-Agent utilizado: {user_agent}\nSession id: {driver.session_id}")
+        print(f"\n[INFO] User-Agent utilizado: {user_agent}\n[INFO] Session id: {driver.session_id}")
 
         apply_fixed_filters(driver)
 
@@ -377,15 +377,9 @@ def run_query(
         Fecha inicial en formato dd/mm/yyyy.
     end_date : str
         Fecha final en formato dd/mm/yyyy.
-
-    Returns
-    -------
-    list[dict[str, str]]
-        Lista de realizadas (Comunidad Autónoma, Provincia
-        y periodo de tiempo).
     """
     no_data = False
-    print(count_add_serie)
+
     # Hace click sobre Aceptar para ejecutar la consulta
     run_button = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "cph_Contenido_BtnAniadir"))
@@ -400,10 +394,10 @@ def run_query(
             lambda d: d.execute_script("return document.readyState") == "complete"
         )
         no_data = True
-        print("No hay datos disponibles")
+        print("[NO DATA]")
         
     except:
-        print("Consulta OK")
+        print("[OK]")
         
     if no_data == False:
 
@@ -427,6 +421,7 @@ def run_query(
             EC.element_to_be_clickable((By.ID, "cph_Contenido_GridSeries_ImgDescargarSeries"))
         )
         download_button.click()
+        print(f"[DESCARGA] {province} | {start_date} -> {end_date}\n")
 
         # Reiniciar la serie
         home = WebDriverWait(driver, 10).until(
@@ -475,7 +470,7 @@ def execute_row(
     try:
         driver.get(BASE_URL)
         user_agent = driver.execute_script("return navigator.userAgentData;")
-        print(f"\nUser-Agent utilizado: {user_agent}\nSession id: {driver.session_id}")
+        print(f"\n[INFO] User-Agent utilizado: {user_agent}\n[INFO] Session id: {driver.session_id}")
 
         apply_fixed_filters(driver)
 
@@ -515,7 +510,7 @@ def execute_row(
                 )
 
                 count_add_serie-=1
-                print(fuel)
+                
                 run_query(driver, count_add_serie, catalog_row["provincia"], period_start, period_end)
 
             planned_queries.append(query_row)

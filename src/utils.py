@@ -104,6 +104,12 @@ def catalog_length() -> int:
 
     return len(df)
 
+def encoding():
+    try:
+        return "latin-1"
+    except:
+        return "utf-8"
+    
 
 def load_catalog_row(in_row: int) -> dict[str, str]:
     """
@@ -133,7 +139,7 @@ def load_catalog_row(in_row: int) -> dict[str, str]:
             "o usa --refresh-catalog."
         )
 
-    df = pd.read_csv(OUTPUT_CSV, dtype=str, encoding="latin-1")
+    df = pd.read_csv(OUTPUT_CSV, dtype=str)
 
     if df.empty:
         raise ValueError("El catálogo base existe, pero no contiene filas.")
