@@ -74,7 +74,7 @@ def transfer_to_df(queries: list[dict[str, str]]) -> None:
     for q in queries[:-1]:
         file = os.path.join(
             RAW_DIR,
-            f"{q["provincia"]}_{q["fecha_inicial"].replace("/","-")}_{q["fecha_final"].replace("/","-")}.xls"
+            f"{q["provincia"].replace("/","-")}_{q["fecha_inicial"].replace("/","-")}_{q["fecha_final"].replace("/","-")}.xls"
             )
         if os.path.exists(file):
             

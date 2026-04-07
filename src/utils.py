@@ -301,7 +301,7 @@ def rename_xls(province: str, start_date: str, end_date: str) -> None:
     in_file = os.path.join(RAW_DIR, "Datos.xls")
     out_file = os.path.join(
         RAW_DIR, 
-        f"{province}_{start_date.replace("/","-")}_{end_date.replace("/","-")}.xls"
+        f"{province.replace("/","-")}_{start_date.replace("/","-")}_{end_date.replace("/","-")}.xls"
         )
     while os.path.exists(in_file) == False:
         time.sleep(1)
