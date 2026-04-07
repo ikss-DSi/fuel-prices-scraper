@@ -515,7 +515,6 @@ def execute_row(
 
             planned_queries.append(query_row)
             
-        #print(f"[OK] Consultas realizadas: {len(planned_queries)}")
         planned_queries.append({item["value"]: item["label"] for item in target_fuels})
 
         return planned_queries
