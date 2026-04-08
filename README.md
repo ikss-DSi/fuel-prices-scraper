@@ -5,6 +5,9 @@ Repositorio para la práctica 1 de la asignatura Tipología y ciclo de vida de l
 
 ## Objetivo
 En esta práctica se elabora un caso práctico orientado a identificar y extraer datos relevantes para un proyecto analítico, empleando herramientas específicas de web scraping.
+Utilizamos la siguiente web como fuente principal del scraping.
+
+  *https://energia.serviciosmin.gob.es/shpCarburantes/vista/shp.aspx*
 
 ## Miembros del equipo
 - Iker Serrato  
