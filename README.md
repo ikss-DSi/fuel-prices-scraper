@@ -1,5 +1,4 @@
-# Práctica 1: ¿Cómo podemos capturar los datos de la web?
-# Tipología y ciclo de vida de los datos
+# Tipología y ciclo de vida de los datos. Práctica 1: ¿Cómo podemos capturar los datos de la web?
 
 
 Repositorio para la práctica 1 de la asignatura Tipología y ciclo de vida de los datos del Máster de Ciencia de Datos de la Universita Oberta de Catalunya.
