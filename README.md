@@ -1,17 +1,17 @@
 # Práctica 1: ¿Cómo podemos capturar los datos de la web?
-## Tipología y ciclo de vida de los datos
+# Tipología y ciclo de vida de los datos
 
 
 Repositorio para la práctica 1 de la asignatura Tipología y ciclo de vida de los datos del Máster de Ciencia de Datos de la Universita Oberta de Catalunya.
 
-### Objetivo
+## Objetivo
 En esta práctica se elabora un caso práctico orientado a identificar y extraer datos relevantes para un proyecto analítico, empleando herramientas específicas de web scraping.
 
-### Miembros del equipo
+## Miembros del equipo
 - Iker Serrato  
 - Marta de Luis
 
-### Estructura
+## Estructura
 - **docs:** documentación de la práctica
 - **data:**
   - **raw:** xls descargados y csv de catálogo
@@ -24,7 +24,7 @@ En esta práctica se elabora un caso práctico orientado a identificar y extraer
 - README.md
 - requirements.txt
 
-### Instalación
+## Instalación
 Para ejecutar este proyecto se recomienda utilizar un virtual environment en el que poder instalar todas las dependencias necesarias sin que interfieran con las que estén disponibles la máquina ejecutora.
 
 Para ello, se puede usar el paquete `virtualenv`. Una vez instalado, puede iniciarse desde un cmd (Anaconda en este caso) como se muestra a continuación:
@@ -37,7 +37,7 @@ El proyecto cuenta con el archivo *requirements.txt* que deberá ser utilizado p
     pip install -r requirements.txt
 
 
-### Modo de ejecución
+## Modo de ejecución
 Para la ejecución del proyecto, debe ejecutarse el archivo ***main.py*** disponible en la carpeta src.
 
 ```python
@@ -53,7 +53,7 @@ src/main.py --start 01/01/2020 --end 03/04/2020 --refresh-catalog
 ```
 
 
-### Notas técnicas
+## Notas técnicas
 
 - Se implementa el uso de **filas del CSV generado** (`Comumindades_provincias.csv`) como base para configurar automáticamente:
   - Comunidad autónoma  
