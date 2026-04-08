@@ -8,14 +8,14 @@ def main() -> None:
     Punto de entrada del proyecto.
 
     Permite:
-    1. Generar el catálogo base de comunidades, provincias y carburantes.
-    2. Usar la primera fila del CSV generado para preparar iteraciones
+    1. Generar el catálogo base de comunidades y provincias.
+    2. Resocrrer las filas del CSV generado para preparar iteraciones
        del formulario con periodos mensuales y combustibles objetivo.
     """
     parser = argparse.ArgumentParser(
         description=(
             "Geoportal de Hidrocarburos: genera el catálogo base y prepara "
-            "iteraciones del formulario a partir de la primera fila del CSV."
+            "iteraciones del formulario del CSV."
         )
     )
     parser.add_argument(

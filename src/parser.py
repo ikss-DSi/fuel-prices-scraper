@@ -1,6 +1,7 @@
-from utils import OUTPUT_DF, RAW_DIR
 import os
 import pandas as pd
+from utils import OUTPUT_DF, RAW_DIR
+
 
 def build_catalog_rows(
     communities: list[dict],
