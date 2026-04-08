@@ -1,35 +1,4 @@
-attrs @ file:///C:/Users/task_177495968090263/croot/attrs_1774959752963/work
-beautifulsoup4 @ file:///C:/Users/task_177029174485644/croot/beautifulsoup4-split_1770291849065/work
-brotlicffi @ file:///C:/miniconda3/conda-bld/brotlicffi_1764961392766/work
-certifi @ file:///C:/Users/task_176765924091863/croot/certifi_1767659364229/work/certifi
-cffi @ file:///C:/miniconda3/conda-bld/cffi_1761832793693/work
-charset-normalizer @ file:///C:/miniconda3/conda-bld/charset-normalizer_1761744988796/work
-h11 @ file:///C:/miniconda3/conda-bld/h11_1761931280691/work
-idna @ file:///C:/Users/dev-admin/buildout/croot/idna_1762551230734/work
-numpy==2.4.4
-outcome @ file:///C:/Users/dev-admin/buildout/croot/outcome_1759962467938/work
-packaging @ file:///C:/miniconda3/conda-bld/packaging_1761049098810/work
 pandas==2.3.3
-pycparser @ file:///C:/Users/task_177495971781166/croot/pycparser_1774959830167/work
-PySocks @ file:///C:/miniconda3/conda-bld/pysocks_1761753029698/work
-python-dateutil==2.9.0.post0
-python-dotenv==1.2.2
-pytz==2026.1.post1
-requests @ file:///C:/miniconda3/conda-bld/requests_1762359708170/work
-selenium @ file:///C:/Users/dev-admin/buildout/croot/selenium_1768753401097/work
-setuptools==80.10.2
-six==1.17.0
-sniffio @ file:///C:/miniconda3/conda-bld/sniffio_1764329214965/work
-sortedcontainers @ file:///tmp/build/80754af9/sortedcontainers_1623949099177/work
-soupsieve @ file:///C:/Users/dev-admin/buildout/croot/soupsieve_1761938454850/work
-trio @ file:///C:/miniconda3/conda-bld/trio_1762422089301/work
-trio-websocket @ file:///C:/Users/task_176709327191146/croot/trio-websocket_1767093394242/work
-typing_extensions @ file:///C:/Users/dev-admin/buildout/croot/typing_extensions_1759955056205/work
-tzdata==2025.3
-urllib3 @ file:///C:/Users/task_176781036399437/croot/urllib3_1767810487549/work
+selenium==4.27.1
 webdriver-manager==4.0.2
-websocket-client @ file:///C:/Users/dev-admin/buildout/croot/websocket-client_1759957369455/work
-wheel==0.46.3
-win_inet_pton @ file:///C:/miniconda3/conda-bld/win_inet_pton_1761746275387/work
-wsproto @ file:///C:/Users/dev-admin/buildout/croot/wsproto_1765282485032/work
-xlrd @ file:///home/task_175990984508907/conda-bld/xlrd_1759910281352/work
+xlrd==2.0.1
